@@ -1,9 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import axios from 'axios'
+import api from '../api'
 import AuthCard from '../components/AuthCard'
-import config from "../../config";
-const API = config.BASE_URL;
 
 const Login = () => {
   const navigate = useNavigate()
@@ -11,6 +9,15 @@ const Login = () => {
   const [error, setError] = useState('')
   const [message, setMessage] = useState('')
   const [loading, setLoading] = useState(false)
+  const [dark, setDark] = useState(() => {
+    const stored = localStorage.getItem('theme')
+    if (stored) return stored === 'dark'
+    return window.matchMedia('(prefers-color-scheme: dark)').matches
+  })
+
+  useEffect(() => {
+    document.documentElement.classList.toggle('dark', dark)
+  }, [dark])
 
   useEffect(() => {
     if (localStorage.getItem('token')) {
@@ -20,143 +27,198 @@ const Login = () => {
 
   const handleChange = (e) => setFormData({ ...formData, [e.target.id]: e.target.value })
 
- const handleSubmit = async (e) => {
-  e.preventDefault()
-  setError('')
-  setMessage('')
-  setLoading(true)
+  const handleSubmit = async (e) => {
+    e.preventDefault()
+    setError('')
+    setMessage('')
+    setLoading(true)
 
-  // ✅ Email validation
-  if (!formData.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-    setError("Please enter a valid email address")
-    setLoading(false)
-    return
-  }
-
-  try {
-    const response = await axios.post(`${API}/api/auth/login`, formData)
-    localStorage.setItem('token', response.data.token)
-    setMessage('Login successful! Redirecting...')
-    setTimeout(() => navigate('/dashboard'), 1000)
-  } catch (err) {
-    if (err.response && err.response.data && err.response.data.message) {
-      setError(err.response.data.message)
-    } else {
-      setError(err.message || 'Login failed. Please try again.')
+    if (!formData.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      setError('Please enter a valid email address')
+      setLoading(false)
+      return
     }
-  } finally {
-    setLoading(false)
+
+    try {
+      const response = await api.post('/auth/login', formData)
+      localStorage.setItem('token', response.data.token)
+      setMessage('Login successful! Redirecting...')
+      setTimeout(() => navigate('/dashboard'), 1000)
+    } catch (err) {
+      if (err.response?.data?.message) {
+        setError(err.response.data.message)
+      } else {
+        setError(err.message || 'Login failed. Please try again.')
+      }
+    } finally {
+      setLoading(false)
+    }
   }
-}
 
-  // Enhanced input field styles
-  const inputContainerClass = "relative mb-6"
-  const inputClass = `
-    w-full pl-12 pr-4 py-4 border border-gray-300 rounded-xl 
-    text-gray-900 placeholder-gray-500 bg-white
-    focus:outline-none focus:ring-3 focus:ring-blue-500/20 focus:border-blue-500
-    transition-all duration-300 shadow-sm
-    hover:border-gray-400 hover:shadow-md
-  `
-  const inputIconClass = "absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400"
-
-  // Enhanced button style
-  const buttonClass = `
-    flex items-center justify-center w-full gap-3
-    px-8 py-4 bg-gradient-to-r from-blue-500 to-blue-600 text-white 
-    font-semibold rounded-xl shadow-lg
-    transform transition-all duration-300 ease-out
-    hover:from-blue-600 hover:to-blue-700 hover:-translate-y-0.5 
-    hover:shadow-xl hover:scale-[1.02]
-    active:scale-95 border border-blue-400/30
-    disabled:opacity-70 disabled:cursor-not-allowed disabled:transform-none
-  `
+  const inputStyle = {
+    backgroundColor: 'var(--bg-secondary)',
+    border: '1px solid var(--border-default)',
+    color: 'var(--text-primary)',
+    borderRadius: 'var(--radius-md)',
+  }
 
   return (
-    <div className="relative min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 via-white to-gray-100 p-4 overflow-hidden">
-      
-      {/* Enhanced decorative background blobs */}
-      <div 
-        className="absolute top-1/4 -left-1/4 w-96 h-96 bg-blue-200 rounded-full 
-                   opacity-40 blur-3xl filter animate-pulse"
-      />
-      <div 
-        className="absolute bottom-1/4 -right-1/4 w-96 h-96 bg-purple-200 rounded-full 
-                   opacity-40 blur-3xl filter animate-pulse"
-        style={{ animationDelay: '2s' }}
-      />
-      
-      <AuthCard title="Welcome Back">
-        
-        {/* Enhanced styled messages */}
+    <div
+      className="min-h-screen flex items-center justify-center px-4 py-12 transition-colors"
+      style={{ backgroundColor: 'var(--bg-primary)' }}
+    >
+      {/* Theme toggle */}
+      <button
+        onClick={() => {
+          const next = !dark
+          setDark(next)
+          localStorage.setItem('theme', next ? 'dark' : 'light')
+        }}
+        className="fixed top-6 right-6 p-2 rounded-md transition-colors"
+        style={{ color: 'var(--text-secondary)', border: '1px solid var(--border-default)' }}
+        aria-label="Toggle theme"
+      >
+        {dark ? (
+          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v2.25m6.364.386l-1.591 1.591M21 12h-2.25m-.386 6.364l-1.591-1.591M12 18.75V21m-4.773-4.227l-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z" />
+          </svg>
+        ) : (
+          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M21.752 15.002A9.718 9.718 0 0118 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 003 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 009.002-5.998z" />
+          </svg>
+        )}
+      </button>
+
+      {/* Back to home */}
+      <button
+        onClick={() => navigate('/')}
+        className="fixed top-6 left-6 text-sm font-medium transition-colors"
+        style={{ color: 'var(--text-secondary)' }}
+        onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--text-primary)')}
+        onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--text-secondary)')}
+      >
+        ← Back
+      </button>
+
+      <AuthCard title="Welcome back">
+        {/* Error message */}
         {error && (
-          <div className="border border-red-200 bg-red-50 text-red-700 p-4 rounded-xl mb-6 text-center text-sm">
+          <div
+            className="p-3 rounded-lg mb-6 text-sm"
+            style={{
+              backgroundColor: 'var(--status-error-bg)',
+              border: '1px solid var(--status-error-border)',
+              color: 'var(--status-error-text)',
+            }}
+          >
             {error}
           </div>
         )}
+
+        {/* Success message */}
         {message && (
-          <div className="border border-green-200 bg-green-50 text-green-700 p-4 rounded-xl mb-6 text-center text-sm">
+          <div
+            className="p-3 rounded-lg mb-6 text-sm"
+            style={{
+              backgroundColor: 'var(--status-success-bg)',
+              border: '1px solid var(--status-success-border)',
+              color: 'var(--status-success-text)',
+            }}
+          >
             {message}
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-2">
-          {/* Enhanced email input group */}
-          <div className={inputContainerClass}>
-            <label htmlFor="email" className="sr-only">Email</label>
-            <svg className={inputIconClass} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" />
-            </svg>
+        <form onSubmit={handleSubmit} className="space-y-5">
+          {/* Email */}
+          <div>
+            <label
+              htmlFor="email"
+              className="block text-sm font-medium mb-1.5"
+              style={{ color: 'var(--text-secondary)' }}
+            >
+              Email
+            </label>
             <input
               type="email"
               id="email"
               placeholder="you@example.com"
               value={formData.email}
               onChange={handleChange}
-              className={inputClass}
+              className="w-full px-3.5 py-2.5 text-sm transition-colors focus:outline-none"
+              style={inputStyle}
+              onFocus={(e) => (e.currentTarget.style.borderColor = 'var(--border-focus)')}
+              onBlur={(e) => (e.currentTarget.style.borderColor = 'var(--border-default)')}
               required
             />
           </div>
 
-          {/* Enhanced password input group */}
-          <div className={inputContainerClass}>
-            <label htmlFor="password" className="sr-only">Password</label>
-            <svg className={inputIconClass} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
-            </svg>
+          {/* Password */}
+          <div>
+            <label
+              htmlFor="password"
+              className="block text-sm font-medium mb-1.5"
+              style={{ color: 'var(--text-secondary)' }}
+            >
+              Password
+            </label>
             <input
               type="password"
               id="password"
               placeholder="••••••••"
               value={formData.password}
               onChange={handleChange}
-              className={inputClass}
+              className="w-full px-3.5 py-2.5 text-sm transition-colors focus:outline-none"
+              style={inputStyle}
+              onFocus={(e) => (e.currentTarget.style.borderColor = 'var(--border-focus)')}
+              onBlur={(e) => (e.currentTarget.style.borderColor = 'var(--border-default)')}
               required
             />
           </div>
 
-          {/* Enhanced login button */}
+          {/* Submit */}
           <button
             type="submit"
-            className={buttonClass}
+            className="w-full py-2.5 text-sm font-semibold rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            style={{
+              backgroundColor: 'var(--accent)',
+              color: 'var(--text-on-accent)',
+              borderRadius: 'var(--radius-md)',
+            }}
+            onMouseEnter={(e) => { if (!loading) e.currentTarget.style.backgroundColor = 'var(--accent-hover)' }}
+            onMouseLeave={(e) => { if (!loading) e.currentTarget.style.backgroundColor = 'var(--accent)' }}
             disabled={loading}
+            id="login-submit"
           >
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" 
-                 className={`w-6 h-6 transform transition-transform duration-300 ${loading ? 'animate-spin' : 'group-hover:scale-105'}`}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15m3 0l3-3m0 0l-3-3m3 3H9" />
-            </svg>
-            <span className="transform transition-transform duration-300 group-hover:scale-105">
-              {loading ? "Signing In..." : "Sign In"}
-            </span>
+            {loading ? (
+              <span className="flex items-center justify-center gap-2">
+                <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                </svg>
+                Signing in…
+              </span>
+            ) : (
+              'Sign In'
+            )}
           </button>
 
-          {/* Enhanced footer text */}
-          <div className="text-center text-sm text-gray-600 mt-8 pt-6 border-t border-gray-200">
-            <p className="mb-2">Don't have an account?</p>
-            <a href="/register" className="text-blue-600 hover:text-blue-700 font-semibold 
-                                         transition-all duration-300 hover:underline inline-block">
-              Create your account
-            </a>
+          {/* Footer link */}
+          <div
+            className="text-center text-sm pt-4 mt-4"
+            style={{ borderTop: '1px solid var(--border-default)' }}
+          >
+            <span style={{ color: 'var(--text-tertiary)' }}>Don't have an account? </span>
+            <button
+              type="button"
+              onClick={() => navigate('/register')}
+              className="font-medium transition-colors"
+              style={{ color: 'var(--text-primary)' }}
+              onMouseEnter={(e) => (e.currentTarget.style.textDecoration = 'underline')}
+              onMouseLeave={(e) => (e.currentTarget.style.textDecoration = 'none')}
+            >
+              Create account
+            </button>
           </div>
         </form>
       </AuthCard>

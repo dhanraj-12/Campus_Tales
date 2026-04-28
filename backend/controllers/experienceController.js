@@ -1,16 +1,14 @@
 const Experience = require("../models/Experience");
-const QUESTIONS = require("../config/questions");
 
 // @desc Create new experience
 // @route POST /api/experience
 // @access Private (Student)
-exports.createExperience = async (req, res) => {
+exports.createExperience = async (req, res, next) => {
   try {
-    const { companyName, type, experienceText, year, branch, passoutYear, placementType, questions, additionalNotes } = req.body;
-
-    if (!companyName || !type || !experienceText || !year || !branch || !passoutYear || !placementType) {
-      return res.status(400).json({ message: "All fields are required" });
-    }
+    const {
+      companyName, type, experienceText, year,
+      branch, passoutYear, placementType, questions, additionalNotes,
+    } = req.body;
 
     const experience = await Experience.create({
       student: req.user.id,
@@ -28,157 +26,80 @@ exports.createExperience = async (req, res) => {
 
     res.status(201).json(experience);
   } catch (error) {
-    console.error("Error creating experience:", error);
-    res.status(500).json({ message: error.message });
+    next(error);
   }
 };
-
 
 // @desc Get all approved experiences
 // @route GET /api/experience
 // @access Public
-exports.getApprovedExperiences = async (req, res) => {
+exports.getApprovedExperiences = async (req, res, next) => {
   try {
     const experiences = await Experience.find({ status: "approved" })
       .populate("student", "name email")
       .sort({ createdAt: -1 });
     res.json(experiences);
   } catch (error) {
-    res.status(500).json({ message: "Server error" });
+    next(error);
   }
 };
 
 // @desc Get single experience by ID
 // @route GET /api/experience/:id
-exports.getExperienceById = async (req, res) => {
+// @access Private
+exports.getExperienceById = async (req, res, next) => {
   try {
     const exp = await Experience.findById(req.params.id)
       .populate("student", "name email");
 
-    // ❌ Experience not found
     if (!exp) {
-      return res.status(404).json({
-        message: "Experience not found"
-      });
+      return res.status(404).json({ message: "Experience not found" });
     }
 
-    // ⚠️ Not approved (pending / rejected)
+    // Not approved (pending / rejected)
     if (exp.status !== "approved") {
       return res.status(400).json({
         message: "Experience not approved",
-        status: exp.status,                 // "pending" | "rejected"
-        studentId: exp.student._id.toString() // REQUIRED for frontend
+        status: exp.status,
+        studentId: exp.student._id.toString(),
       });
     }
 
-    // ✅ Approved → send full experience
     return res.status(200).json(exp);
-
   } catch (error) {
-    console.error("getExperienceById error:", error);
-    return res.status(500).json({
-      message: "Internal server error"
-    });
+    next(error);
   }
 };
 
-
 // @desc Increment views
 // @route PUT /api/experience/:id/view
-exports.incrementViews = async (req, res) => {
+// @access Public
+exports.incrementViews = async (req, res, next) => {
   try {
     const exp = await Experience.findById(req.params.id);
-    if (!exp) return res.status(404).json({ message: "Experience not found" });
+    if (!exp) {
+      return res.status(404).json({ message: "Experience not found" });
+    }
 
     exp.views += 1;
     await exp.save();
     res.json({ views: exp.views });
   } catch (error) {
-    res.status(500).json({ message: "Server error" });
+    next(error);
   }
 };
-
-// @desc Get all pending experiences (Admin)
-// @route GET /api/experience/admin/pending
-// @access Admin
-exports.getPendingExperiences = async (req, res) => {
-  try {
-    const pending = await Experience.find({ status: "pending" }).populate("student", "name email");
-    res.json(pending);
-  } catch (error) {
-    res.status(500).json({ message: "Server error" });
-  }
-};
-
-// @desc Approve experience (Admin)
-// @route PUT /api/experience/admin/approve/:id
-// @access Admin
-exports.approveExperience = async (req, res) => {
-  try {
-    const exp = await Experience.findById(req.params.id);
-    if (!exp) return res.status(404).json({ message: "Experience not found" });
-
-    exp.status = "approved";
-    await exp.save();
-    res.json({ message: "Experience approved" });
-  } catch (error) {
-    res.status(500).json({ message: "Server error" });
-  }
-};
-
-// @desc Reject experience (Admin)
-// @route PUT /api/experience/admin/reject/:id
-exports.rejectExperience = async (req, res) => {
-  try {
-    const exp = await Experience.findById(req.params.id);
-    if (!exp) return res.status(404).json({ message: "Experience not found" });
-
-    exp.status = "rejected";
-    await exp.save();
-    res.json({ message: "Experience rejected" });
-  } catch (error) {
-    res.status(500).json({ message: "Server error" });
-  }
-};
-
 
 // @desc Get all experiences of logged-in student (any status)
-exports.getMyExperiences = async (req, res) => {
+// @route GET /api/experience/me
+// @access Private
+exports.getMyPosts = async (req, res, next) => {
   try {
-    const experiences = await Experience.find({ student: req.user.id })
-      .populate("student", "name email")
-      .sort({ createdAt: -1 });
-
-    res.json(experiences);
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
-};
-
-const getExperienceById = async (req, res) => {
-  try {
-    const exp = await Experience.findById(req.params.id).populate("student", "name email");
-    if (!exp) return res.status(404).json({ message: "Experience not found" });
-    res.json(exp);
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
-};
-
-exports.getMyPosts = async (req, res) => {
-  try {
-    if (!req.user || !req.user.id) {
-      return res.status(401).json({ message: "Unauthorized" });
-    }
-
-    // Correct query: student is stored as ObjectId
     const posts = await Experience.find({ student: req.user.id })
       .populate("student", "name email")
       .sort({ createdAt: -1 });
 
     res.json(posts);
-  } catch (err) {
-    console.error("Failed to fetch my posts:", err);
-    res.status(500).json({ message: "Server error" });
+  } catch (error) {
+    next(error);
   }
 };

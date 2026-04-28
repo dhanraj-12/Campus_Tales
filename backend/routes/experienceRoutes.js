@@ -3,38 +3,24 @@ const router = express.Router();
 const {
   createExperience,
   getApprovedExperiences,
-  getPendingExperiences,
-  approveExperience,
-  rejectExperience,
   getExperienceById,
   incrementViews,
-  getMyExperiences,
-  getMyPosts
-  
+  getMyPosts,
 } = require("../controllers/experienceController");
+const { experienceRules, handleValidationErrors } = require("../middleware/validate");
 const QUESTIONS = require("../config/questions");
-
-const { protect, adminOnly } = require("../middleware/authMiddleware");
+const { protect } = require("../middleware/authMiddleware");
 
 // Get predefined questions (public)
 router.get("/questions/list", (req, res) => {
   res.json(QUESTIONS);
 });
 
-//experience routes 
-router.get("/me", protect, getMyPosts);
-router.get("/:id", protect, getExperienceById);
-
-// Student Routes
-router.post("/", protect, createExperience); // submit new experience
-router.get("/", getApprovedExperiences); // view all approved
-router.get("/:id", getExperienceById); // view single experience
-router.put("/:id/view", incrementViews); // count views
-
-// Admin Routes
-router.get("/admin/pending", protect, adminOnly, getPendingExperiences);
-router.put("/admin/approve/:id", protect, adminOnly, approveExperience);
-router.put("/admin/reject/:id", protect, adminOnly, rejectExperience);
-
+// Student routes — specific paths BEFORE parameterized routes
+router.get("/me", protect, getMyPosts);                    // my posts (any status)
+router.post("/", protect, experienceRules, handleValidationErrors, createExperience); // submit new
+router.get("/", getApprovedExperiences);                   // all approved (public)
+router.put("/:id/view", incrementViews);                   // increment views (public)
+router.get("/:id", protect, getExperienceById);            // single experience (auth)
 
 module.exports = router;

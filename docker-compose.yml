@@ -1,18 +1,60 @@
 services:
+  # ─── MongoDB ─────────────────────────────────
+  mongo:
+    image: mongo:7
+    container_name: campus-mongo
+    restart: always
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    networks:
+      - campus-net
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  # ─── Backend API ─────────────────────────────
   backend:
-    image: rajvardhan1110/campus-tales-backend:latest
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
     container_name: campus-backend
     env_file:
-      - .env
+      - ./backend/.env
+    environment:
+      - NODE_ENV=production
     ports:
-      - "3000:3000"
+      - "5000:5000"
+    depends_on:
+      mongo:
+        condition: service_healthy
     restart: always
+    networks:
+      - campus-net
 
+  # ─── Frontend (Nginx) ───────────────────────
   frontend:
-    image: rajvardhan1110/campus-tales-frontend:latest
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        - VITE_API_URL=/api
     container_name: campus-frontend
     ports:
       - "80:80"
     depends_on:
       - backend
     restart: always
+    networks:
+      - campus-net
+
+volumes:
+  mongo_data:
+
+networks:
+  campus-net:
+    driver: bridge

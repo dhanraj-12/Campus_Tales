@@ -8,26 +8,11 @@ const generateToken = (id, role) => {
 };
 
 // @desc Register a new user
-exports.registerUser = async (req, res) => {
+// @route POST /api/auth/register
+// @access Public
+exports.registerUser = async (req, res, next) => {
   try {
     const { name, email, password } = req.body;
-
-    if (!name || !email || !password) {
-      return res.status(400).json({ message: "All fields are required" });
-    }
-
-    // ✅ Email validation (basic format check)
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      return res.status(400).json({ message: "Please enter a valid email address" });
-    }
-
-    // ✅ Password constraint
-    if (password.length < 6) {
-      return res
-        .status(400)
-        .json({ message: "Password must be at least 6 characters long" });
-    }
 
     // Check if user exists
     const existingUser = await User.findOne({ email });
@@ -36,7 +21,7 @@ exports.registerUser = async (req, res) => {
     }
 
     // Hash password
-    const hashedPassword = await bcrypt.hash(password, 10);
+    const hashedPassword = await bcrypt.hash(password, 12);
 
     // Assign role automatically
     const role = email === process.env.ADMIN_EMAIL ? "admin" : "student";
@@ -56,26 +41,26 @@ exports.registerUser = async (req, res) => {
       token: generateToken(user.id, user.role),
     });
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: "Server error" });
+    next(error);
   }
 };
 
 // @desc Login user
-exports.loginUser = async (req, res) => {
+// @route POST /api/auth/login
+// @access Public
+exports.loginUser = async (req, res, next) => {
   try {
     const { email, password } = req.body;
 
-    if (!email || !password) {
-      return res.status(400).json({ message: "Email and password are required" });
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(400).json({ message: "Invalid credentials" });
     }
 
-    const user = await User.findOne({ email });
-    if (!user) return res.status(400).json({ message: "Invalid credentials" });
-
     const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch)
+    if (!isMatch) {
       return res.status(400).json({ message: "Invalid credentials" });
+    }
 
     res.json({
       _id: user.id,
@@ -85,14 +70,21 @@ exports.loginUser = async (req, res) => {
       token: generateToken(user.id, user.role),
     });
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: "Server error" });
+    next(error);
   }
 };
 
 // @desc Get user profile
-exports.getUserProfile = async (req, res) => {
-  const user = await User.findById(req.user.id).select("-password");
-  if (!user) return res.status(404).json({ message: "User not found" });
-  res.json(user);
+// @route GET /api/auth/me
+// @access Private
+exports.getUserProfile = async (req, res, next) => {
+  try {
+    const user = await User.findById(req.user.id).select("-password");
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+    res.json(user);
+  } catch (error) {
+    next(error);
+  }
 };

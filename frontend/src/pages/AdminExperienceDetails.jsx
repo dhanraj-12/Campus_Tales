@@ -1,31 +1,33 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import axios from "axios";
-import Footer from "../components/Footer";
-import config from "../../config";
-const API = config.BASE_URL;
+import api from "../api";
 
-// --- Icons ---
-const IconApprove = () => <svg className="w-5 h-5 transition-transform duration-300 group-hover:scale-105" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-const IconReject = () => <svg className="w-5 h-5 transition-transform duration-300 group-hover:scale-105" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" /></svg>
-const IconDashboard = () => <svg className="w-5 h-5 transition-transform duration-300 group-hover:scale-105" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M2.25 12l8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25" /></svg>
-
-// --- Helper Components ---
+// --- Tag ---
 const InfoTag = ({ label, value }) => (
-  <span className="inline-block bg-gray-100 text-gray-800 text-sm font-medium px-4 py-2 rounded-full
-                   transition-all duration-300 hover:bg-gray-200">
-    <strong>{label}:</strong> {value || 'N/A'}
+  <span
+    className="inline-block text-xs font-medium px-3 py-1.5 rounded-full"
+    style={{
+      backgroundColor: "var(--bg-tertiary)",
+      color: "var(--text-secondary)",
+    }}
+  >
+    <strong>{label}:</strong> {value || "N/A"}
   </span>
 );
 
+// --- Status Badge ---
 const StatusBadge = ({ status }) => {
   const styles = {
-    approved: "bg-green-100 text-green-800",
-    rejected: "bg-red-100 text-red-800",
-    pending: "bg-yellow-100 text-yellow-800",
+    approved: { bg: "var(--status-success-bg)", border: "var(--status-success-border)", text: "var(--status-success-text)" },
+    rejected: { bg: "var(--status-error-bg)", border: "var(--status-error-border)", text: "var(--status-error-text)" },
+    pending: { bg: "var(--status-warning-bg)", border: "var(--status-warning-border)", text: "var(--status-warning-text)" },
   };
+  const s = styles[status] || styles.pending;
   return (
-    <span className={`inline-block text-sm font-bold uppercase px-4 py-1.5 rounded-full ${styles[status] || styles.pending}`}>
+    <span
+      className="inline-block text-xs font-semibold uppercase px-3 py-1.5 rounded-full"
+      style={{ backgroundColor: s.bg, color: s.text, border: `1px solid ${s.border}` }}
+    >
       {status}
     </span>
   );
@@ -34,236 +36,226 @@ const StatusBadge = ({ status }) => {
 const AdminExperienceDetails = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  // sidebar removed: no local sidebar state needed
   const [experience, setExperience] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isUpdating, setIsUpdating] = useState(false);
-  const token = localStorage.getItem("token");
+  const [notification, setNotification] = useState(null);
 
-  // toggleSidebar removed
+  const showNotification = (type, message) => {
+    setNotification({ type, message });
+    setTimeout(() => setNotification(null), 3000);
+  };
 
   const fetchExperience = useCallback(async () => {
     try {
       setLoading(true);
-      const res = await axios.get(`${API}/api/admin/experience/${id}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const res = await api.get(`/admin/experience/${id}`);
       setExperience(res.data);
     } catch (err) {
       console.error("Error fetching experience:", err);
-      alert("Failed to fetch experience details.");
-      navigate("/admin-dashboard");
+      showNotification("error", "Failed to fetch experience details.");
+      setTimeout(() => navigate("/admin-dashboard"), 2000);
     } finally {
       setLoading(false);
     }
-  }, [id, token, navigate]);
+  }, [id, navigate]);
 
   const handleUpdate = async (action) => {
-    const url =
-      action === "approve"
-        ? `${API}/api/admin/experience/approve/${id}`
-        : `${API}/api/admin/experience/reject/${id}`;
-    
+    const url = action === "approve"
+      ? `/admin/experience/approve/${id}`
+      : `/admin/experience/reject/${id}`;
+
     setIsUpdating(true);
     try {
-      await axios.put(url, {}, { headers: { Authorization: `Bearer ${token}` } });
-      alert(`Experience ${action}d!`);
-      navigate("/admin-dashboard");
+      await api.put(url, {});
+      showNotification("success", `Experience ${action}d successfully!`);
+      setTimeout(() => navigate("/admin-dashboard"), 1500);
     } catch (err) {
       console.error(err);
-      alert(`Failed to ${action} experience.`);
+      showNotification("error", `Failed to ${action} experience.`);
     } finally {
       setIsUpdating(false);
     }
   };
 
-  useEffect(() => {
-    fetchExperience();
-  }, [fetchExperience]);
+  useEffect(() => { fetchExperience(); }, [fetchExperience]);
 
+  // Loading
   if (loading || !experience) {
     return (
-      <div className="flex h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100 text-gray-800">
-        <div className="flex-1 flex flex-col transition-all duration-300">
-
-          <main className="flex-1 overflow-y-auto p-6 flex items-center justify-center">
-            <div className="text-gray-600 text-xl font-medium">
-              Loading...
-            </div>
-          </main>
-          <Footer />
-        </div>
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <svg className="w-8 h-8 animate-spin" style={{ color: "var(--text-tertiary)" }} fill="none" viewBox="0 0 24 24">
+          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+        </svg>
       </div>
     );
   }
 
   return (
-    <div className="flex h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100 text-gray-800">
-      
-      <div className="flex-1 flex flex-col overflow-hidden transition-all duration-300">
+    <div className="max-w-3xl mx-auto px-6 py-8 animate-fade-in">
+      {/* Notification */}
+      {notification && (
+        <div
+          className="fixed top-20 right-6 z-50 p-4 rounded-lg text-sm font-medium shadow-lg animate-fade-in max-w-sm"
+          style={{
+            backgroundColor: notification.type === "error" ? "var(--status-error-bg)" : "var(--status-success-bg)",
+            border: `1px solid ${notification.type === "error" ? "var(--status-error-border)" : "var(--status-success-border)"}`,
+            color: notification.type === "error" ? "var(--status-error-text)" : "var(--status-success-text)",
+          }}
+        >
+          {notification.message}
+        </div>
+      )}
 
+      {/* Header */}
+      <div className="mb-8">
+        <div className="flex items-start justify-between gap-4 mb-2">
+          <h1 className="text-3xl font-bold" style={{ color: "var(--text-primary)", letterSpacing: "-0.02em" }}>
+            {experience.companyName}
+          </h1>
+          <StatusBadge status={experience.status} />
+        </div>
+        <p className="text-sm" style={{ color: "var(--text-tertiary)" }}>
+          Submitted by <span className="font-medium" style={{ color: "var(--text-secondary)" }}>{experience.student?.name || "N/A"}</span>
+          {" · "}{experience.student?.email || ""}
+        </p>
+      </div>
 
-        <main className="flex-1 overflow-y-auto p-6">
-          <div className="max-w-4xl mx-auto bg-white rounded-2xl shadow-xl p-8 sm:p-12
-                         transition-all duration-300 ease-out">
-            
-            {/* --- Company Header & Status --- */}
-            <div className="text-center mb-8 break-words">
-              <h1 className="text-4xl font-bold text-gray-900 mb-3 leading-tight
-                            transform transition-all duration-300">
-                <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                  {experience.companyName}
-                </span>
-              </h1>
-              <StatusBadge status={experience.status} />
-            </div>
+      {/* Info tags */}
+      <div
+        className="flex flex-wrap gap-2 py-5 mb-8"
+        style={{ borderTop: "1px solid var(--border-default)", borderBottom: "1px solid var(--border-default)" }}
+      >
+        <InfoTag label="Branch" value={experience.branch} />
+        <InfoTag label="Year" value={experience.year} />
+        <InfoTag label="Passout" value={experience.passoutYear} />
+        <InfoTag label="Type" value={experience.type} />
+        <InfoTag label="Placement" value={experience.placementType} />
+      </div>
 
-            {/* --- Info Tags --- */}
-            <div className="flex flex-wrap justify-center gap-3 border-y border-gray-200 py-6 my-8">
-              <InfoTag label="Student" value={experience.student?.name} />
-              <InfoTag label="Email" value={experience.student?.email} />
-              <InfoTag label="Branch" value={experience.branch} />
-              <InfoTag label="Year" value={experience.year} />
-              <InfoTag label="Passout" value={experience.passoutYear} />
-              <InfoTag label="Type" value={experience.type} />
-              <InfoTag label="Placement" value={experience.placementType} />
-            </div>
+      {/* Experience */}
+      <div className="mb-8">
+        <h2 className="text-sm font-semibold uppercase tracking-wider mb-3" style={{ color: "var(--text-tertiary)" }}>
+          Experience Details
+        </h2>
+        <div
+          className="p-5 rounded-lg text-sm leading-relaxed whitespace-pre-line break-words"
+          style={{
+            backgroundColor: "var(--bg-secondary)",
+            border: "1px solid var(--border-default)",
+            color: "var(--text-primary)",
+          }}
+        >
+          {experience.experienceText || "No description provided"}
+        </div>
+      </div>
 
-            {/* --- Experience Content --- */}
-            <div className="mt-8">
-              <h2 className="text-2xl font-semibold text-gray-900 mb-4
-                            transform transition-all duration-300">
-                Experience Details
-              </h2>
-              <div className="bg-gray-50 border border-gray-200 rounded-xl p-6 text-gray-800 
-                            whitespace-pre-line leading-relaxed break-words overflow-hidden
-                            transition-all duration-300 hover:bg-gray-100">
-                {experience.experienceText || "No description provided"}
-              </div>
-            </div>
-
-            {/* --- Interview Questions & Answers --- */}
-            {experience.questions && experience.questions.length > 0 && (
-              <div className="mt-8">
-                <h2 className="text-2xl font-semibold text-gray-900 mb-4
-                              transform transition-all duration-300">
-                  Interview Questions & Answers
-                </h2>
-                <div className="space-y-4">
-                  {experience.questions.map((q, index) => (
-                    <div key={index} className="bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200 rounded-xl p-6
-                                              transition-all duration-300 hover:shadow-lg">
-                      <h3 className="text-lg font-semibold text-blue-900 mb-3">
-                        Q{index + 1}: {q.question}
-                      </h3>
-                      <div className="bg-white border border-gray-200 rounded-lg p-4 text-gray-800
-                                    whitespace-pre-line leading-relaxed break-words">
-                        {q.answer || "No answer provided"}
-                      </div>
-                    </div>
-                  ))}
+      {/* Q&A */}
+      {experience.questions && experience.questions.length > 0 && (
+        <div className="mb-8">
+          <h2 className="text-sm font-semibold uppercase tracking-wider mb-4" style={{ color: "var(--text-tertiary)" }}>
+            Interview Q&A
+          </h2>
+          <div className="space-y-4">
+            {experience.questions.map((q, index) => (
+              <div key={index} className="p-5 rounded-lg"
+                style={{ backgroundColor: "var(--bg-secondary)", border: "1px solid var(--border-default)" }}>
+                <h3 className="text-sm font-semibold mb-3" style={{ color: "var(--text-primary)" }}>
+                  <span style={{ color: "var(--text-tertiary)" }}>Q{index + 1}.</span> {q.question}
+                </h3>
+                <div className="p-4 rounded-md text-sm leading-relaxed whitespace-pre-line break-words"
+                  style={{ backgroundColor: "var(--bg-primary)", border: "1px solid var(--border-default)", color: "var(--text-secondary)" }}>
+                  {q.answer || "No answer provided"}
                 </div>
               </div>
-            )}
-
-            {/* --- Additional Notes --- */}
-            {experience.additionalNotes && experience.additionalNotes.trim() !== "" && (
-              <div className="mt-8">
-                <h2 className="text-2xl font-semibold text-gray-900 mb-4
-                              transform transition-all duration-300">
-                  Additional Notes & Insights
-                </h2>
-                <div className="bg-green-50 border border-green-200 rounded-xl p-6 text-gray-800 
-                              whitespace-pre-line leading-relaxed break-words overflow-hidden
-                              transition-all duration-300 hover:bg-green-100">
-                  {experience.additionalNotes}
-                </div>
-              </div>
-            )}
-            
-            {/* Skills / Tools (if they exist) */}
-            {experience.skills && (
-              <div className="mt-6">
-                <h2 className="text-2xl font-semibold text-gray-900 mb-4
-                              transform transition-all duration-300">
-                  Skills / Tools
-                </h2>
-                <div className="bg-gray-50 border border-gray-200 rounded-xl p-6 text-gray-800 
-                              whitespace-pre-line leading-relaxed break-words overflow-hidden
-                              transition-all duration-300 hover:bg-gray-100">
-                  {experience.skills}
-                </div>
-              </div>
-            )}
-
-            {/* --- Approve / Reject Buttons --- */}
-            {(experience.status !== 'approved' || experience.status !== 'rejected') && (
-              <div className="flex justify-center gap-4 mt-10 border-t border-gray-200 pt-8">
-                {experience.status !== 'approved' && (
-                  <button
-                    onClick={() => handleUpdate("approve")}
-                    disabled={isUpdating}
-                    className="group flex items-center justify-center gap-2 w-full sm:w-auto
-                               px-6 py-3 bg-gradient-to-r from-green-500 to-green-600 text-white 
-                               font-semibold rounded-lg shadow-lg
-                               transition-all duration-300 ease-out
-                               hover:from-green-600 hover:to-green-700 hover:-translate-y-0.5 
-                               hover:shadow-xl
-                               active:scale-95
-                               disabled:opacity-70 disabled:cursor-not-allowed disabled:transform-none"
-                  >
-                    <IconApprove />
-                    <span className="transition-transform duration-300 group-hover:scale-105">
-                      {isUpdating ? "Approving..." : "Approve"}
-                    </span>
-                  </button>
-                )}
-
-                {experience.status !== 'rejected' && (
-                  <button
-                    onClick={() => handleUpdate("reject")}
-                    disabled={isUpdating}
-                    className="group flex items-center justify-center gap-2 w-full sm:w-auto
-                               px-6 py-3 bg-gradient-to-r from-red-500 to-red-600 text-white 
-                               font-semibold rounded-lg shadow-lg
-                               transition-all duration-300 ease-out
-                               hover:from-red-600 hover:to-red-700 hover:-translate-y-0.5 
-                               hover:shadow-xl
-                               active:scale-95
-                               disabled:opacity-70 disabled:cursor-not-allowed disabled:transform-none"
-                  >
-                    <IconReject />
-                    <span className="transition-transform duration-300 group-hover:scale-105">
-                      {isUpdating ? "Rejecting..." : "Reject"}
-                    </span>
-                  </button>
-                )}
-              </div>
-            )}
-
-            {/* --- Go to Dashboard Button --- */}
-            <div className={`flex justify-center ${experience.status === 'pending' ? 'mt-6' : 'mt-10 border-t border-gray-200 pt-8'}`}>
-              <button
-                onClick={() => navigate("/admin-dashboard")}
-                disabled={isUpdating}
-                className="group flex items-center justify-center gap-2
-                           px-6 py-2.5 bg-white text-gray-700 font-semibold rounded-lg 
-                           border border-gray-300 shadow-lg
-                           transition-all duration-300 ease-out
-                           hover:bg-gray-50 hover:-translate-y-0.5 hover:shadow-xl
-                           hover:border-gray-400
-                           active:scale-95"
-              >
-                <IconDashboard />
-                <span className="transition-transform duration-300 group-hover:scale-105">
-                  Back to Dashboard
-                </span>
-              </button>
-            </div>
+            ))}
           </div>
-        </main>
+        </div>
+      )}
 
-        <Footer />
+      {/* Additional Notes */}
+      {experience.additionalNotes && experience.additionalNotes.trim() !== "" && (
+        <div className="mb-8">
+          <h2 className="text-sm font-semibold uppercase tracking-wider mb-3" style={{ color: "var(--text-tertiary)" }}>
+            Additional Notes
+          </h2>
+          <div className="p-5 rounded-lg text-sm leading-relaxed whitespace-pre-line break-words"
+            style={{ backgroundColor: "var(--bg-secondary)", border: "1px solid var(--border-default)", color: "var(--text-primary)" }}>
+            {experience.additionalNotes}
+          </div>
+        </div>
+      )}
+
+      {/* Skills */}
+      {experience.skills && (
+        <div className="mb-8">
+          <h2 className="text-sm font-semibold uppercase tracking-wider mb-3" style={{ color: "var(--text-tertiary)" }}>
+            Skills / Tools
+          </h2>
+          <div className="p-5 rounded-lg text-sm leading-relaxed whitespace-pre-line break-words"
+            style={{ backgroundColor: "var(--bg-secondary)", border: "1px solid var(--border-default)", color: "var(--text-primary)" }}>
+            {experience.skills}
+          </div>
+        </div>
+      )}
+
+      {/* Action Buttons */}
+      <div className="pt-6" style={{ borderTop: "1px solid var(--border-default)" }}>
+        {experience.status === "pending" && (
+          <div className="flex flex-col sm:flex-row gap-3 mb-4">
+            <button
+              onClick={() => handleUpdate("approve")}
+              disabled={isUpdating}
+              className="flex-1 py-2.5 text-sm font-semibold rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              style={{
+                backgroundColor: "var(--status-success-text)",
+                color: "#fff",
+                borderRadius: "var(--radius-md)",
+              }}
+              onMouseEnter={(e) => (e.currentTarget.style.opacity = "0.9")}
+              onMouseLeave={(e) => (e.currentTarget.style.opacity = "1")}
+              id="approve-button"
+            >
+              {isUpdating ? "Processing…" : "✓ Approve"}
+            </button>
+            <button
+              onClick={() => handleUpdate("reject")}
+              disabled={isUpdating}
+              className="flex-1 py-2.5 text-sm font-semibold rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              style={{
+                backgroundColor: "var(--status-error-text)",
+                color: "#fff",
+                borderRadius: "var(--radius-md)",
+              }}
+              onMouseEnter={(e) => (e.currentTarget.style.opacity = "0.9")}
+              onMouseLeave={(e) => (e.currentTarget.style.opacity = "1")}
+              id="reject-button"
+            >
+              {isUpdating ? "Processing…" : "✕ Reject"}
+            </button>
+          </div>
+        )}
+
+        <button
+          onClick={() => navigate("/admin-dashboard")}
+          disabled={isUpdating}
+          className="text-sm font-medium px-4 py-2 rounded-lg transition-all"
+          style={{
+            border: "1px solid var(--border-default)",
+            color: "var(--text-primary)",
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.backgroundColor = "var(--accent-muted)";
+            e.currentTarget.style.borderColor = "var(--border-hover)";
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.backgroundColor = "transparent";
+            e.currentTarget.style.borderColor = "var(--border-default)";
+          }}
+        >
+          ← Back to Dashboard
+        </button>
       </div>
     </div>
   );

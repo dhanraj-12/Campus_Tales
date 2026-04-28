@@ -1,97 +1,139 @@
-import React from 'react'
+import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
+
+const IconArrowRight = () => (
+  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+    <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
+  </svg>
+)
 
 const Home = () => {
   const navigate = useNavigate()
+  const [dark, setDark] = useState(() => {
+    const stored = localStorage.getItem('theme')
+    if (stored) return stored === 'dark'
+    return window.matchMedia('(prefers-color-scheme: dark)').matches
+  })
 
-  const primaryButtonClasses = `
-    flex items-center justify-center gap-3
-    px-8 py-4 bg-gradient-to-r from-blue-500 to-blue-600 text-white 
-    font-semibold rounded-xl shadow-lg
-    transform transition-all duration-300 ease-out
-    hover:from-blue-600 hover:to-blue-700 hover:-translate-y-0.5 
-    hover:shadow-xl hover:scale-[1.02]
-    active:scale-95 border border-blue-400/30
-  `
+  useEffect(() => {
+    document.documentElement.classList.toggle('dark', dark)
+  }, [dark])
+
+  // If already logged in, redirect
+  useEffect(() => {
+    const token = localStorage.getItem('token')
+    if (token) {
+      try {
+        const user = JSON.parse(atob(token.split('.')[1]))
+        navigate(user?.role === 'admin' ? '/admin-dashboard' : '/dashboard')
+      } catch {}
+    }
+  }, [navigate])
 
   return (
-    <div className="relative min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 via-white to-gray-100 p-4 overflow-hidden">
-      
-      {/* Subtle background blobs */}
-      <div 
-        className="absolute top-0 -left-1/4 w-96 h-96 bg-blue-200 rounded-full 
-                   opacity-40 blur-3xl filter animate-pulse"
-      />
-      <div 
-        className="absolute bottom-0 -right-1/4 w-96 h-96 bg-purple-200 rounded-full 
-                   opacity-40 blur-3xl filter animate-pulse"
-        style={{ animationDelay: '2s' }}
-      />
-      
-      {/* Main Content */}
-      <main className="relative z-10 flex flex-col items-center text-center">
-        
-        {/* Subtle title hover */}
-        <h1 className="text-5xl md:text-6xl font-extrabold text-gray-900 mb-6 
-                      transform transition-transform duration-300 hover:scale-[1.01]">
-          Welcome to <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-purple-600 
-                                    hover:from-blue-700 hover:to-purple-700 transition-all duration-300">
-            CampusTales
-          </span>!
+    <div
+      className="min-h-screen flex flex-col items-center justify-center px-6 transition-colors"
+      style={{ backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)' }}
+    >
+      {/* Theme toggle */}
+      <button
+        onClick={() => {
+          const next = !dark
+          setDark(next)
+          localStorage.setItem('theme', next ? 'dark' : 'light')
+        }}
+        className="fixed top-6 right-6 p-2 rounded-md transition-colors"
+        style={{ color: 'var(--text-secondary)', border: '1px solid var(--border-default)' }}
+        aria-label="Toggle theme"
+        id="home-theme-toggle"
+      >
+        {dark ? (
+          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v2.25m6.364.386l-1.591 1.591M21 12h-2.25m-.386 6.364l-1.591-1.591M12 18.75V21m-4.773-4.227l-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z" />
+          </svg>
+        ) : (
+          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M21.752 15.002A9.718 9.718 0 0118 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 003 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 009.002-5.998z" />
+          </svg>
+        )}
+      </button>
+
+      {/* Content */}
+      <main className="text-center max-w-2xl animate-fade-in">
+        {/* Brand mark */}
+        <div
+          className="inline-flex items-center justify-center w-16 h-16 rounded-2xl mb-8 text-2xl font-bold"
+          style={{
+            backgroundColor: 'var(--accent)',
+            color: 'var(--text-on-accent)',
+          }}
+        >
+          CT
+        </div>
+
+        <h1
+          className="text-4xl sm:text-5xl md:text-6xl font-bold mb-6"
+          style={{ letterSpacing: '-0.03em', lineHeight: 1.1 }}
+        >
+          Share your campus
+          <br />
+          journey.
         </h1>
-        
-        {/* Subtle description hover */}
-        <p className="text-xl text-gray-600 mb-12 max-w-2xl leading-relaxed
-                     transition-all duration-300 hover:text-gray-700">
-          Share and discover interview experiences, preparation tips, and career
-          journeys from students just like you.
+
+        <p
+          className="text-lg mb-12 max-w-lg mx-auto leading-relaxed"
+          style={{ color: 'var(--text-secondary)' }}
+        >
+          Discover interview experiences, preparation tips, and career insights from students just like you.
         </p>
 
-        {/* Button Container */}
-        <div className="flex flex-col sm:flex-row gap-6 transition-all duration-300">
-          
-          {/* Register Button */}
-          <button 
-            onClick={() => navigate('/register')} 
-            className={primaryButtonClasses}
+        {/* CTA Buttons */}
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+          <button
+            onClick={() => navigate('/register')}
+            className="flex items-center gap-2 px-6 py-3 text-sm font-semibold rounded-lg transition-all"
+            style={{
+              backgroundColor: 'var(--accent)',
+              color: 'var(--text-on-accent)',
+            }}
+            onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--accent-hover)')}
+            onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'var(--accent)')}
+            id="cta-register"
           >
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" 
-                 className="w-6 h-6 transform transition-transform duration-300 group-hover:scale-105">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M19 7.5v3m0 0v3m0-3h3m-3 0h-3m-2.25-4.125a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zM4 19.235v-.11a6.375 6.375 0 0112.75 0v.109A12.318 12.318 0 0110.5 21c-2.305 0-4.47-.612-6.374-1.666z" />
-            </svg>
-            <span className="transform transition-transform duration-300 group-hover:scale-105">
-              Get Started
-            </span>
+            Get Started
+            <IconArrowRight />
           </button>
 
-          {/* Login Button */}
-          <button 
-            onClick={() => navigate('/login')} 
-            className={`
-              flex items-center justify-center gap-3
-              px-8 py-4 bg-white text-gray-800 border border-gray-300
-              font-semibold rounded-xl shadow-lg
-              transform transition-all duration-300 ease-out
-              hover:bg-gray-50 hover:-translate-y-0.5 
-              hover:shadow-xl hover:scale-[1.02] hover:border-gray-400
-              active:scale-95
-            `}
+          <button
+            onClick={() => navigate('/login')}
+            className="flex items-center gap-2 px-6 py-3 text-sm font-semibold rounded-lg transition-all"
+            style={{
+              backgroundColor: 'transparent',
+              color: 'var(--text-primary)',
+              border: '1px solid var(--border-default)',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = 'var(--accent-muted)'
+              e.currentTarget.style.borderColor = 'var(--border-hover)'
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = 'transparent'
+              e.currentTarget.style.borderColor = 'var(--border-default)'
+            }}
+            id="cta-login"
           >
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" 
-                 className="w-6 h-6 transform transition-transform duration-300 group-hover:scale-105">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15m3 0l3-3m0 0l-3-3m3 3H9" />
-            </svg>
-            <span className="transform transition-transform duration-300 group-hover:scale-105">
-              Sign In
-            </span>
+            Sign In
           </button>
-        </div>
-
-        {/* Subtle decorative element */}
-        <div className="mt-16 w-24 h-1 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full 
-                       transform transition-all duration-500 hover:w-28">
         </div>
       </main>
+
+      {/* Footer */}
+      <p
+        className="absolute bottom-6 text-xs"
+        style={{ color: 'var(--text-tertiary)' }}
+      >
+        © {new Date().getFullYear()} CampusTales
+      </p>
     </div>
   )
 }

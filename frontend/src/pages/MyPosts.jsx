@@ -1,12 +1,6 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import axios from "axios";
-import Footer from "../components/Footer";
-import config from "../../config";
-const API = config.BASE_URL;
-
-const IconNotFound = () => <svg className="w-16 h-16 text-blue-300" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m-1.125 0H6.625A2.25 2.25 0 004.5 4.875v11.25a2.25 2.25 0 002.25 2.25h10.5A2.25 2.25 0 0019.5 16.125v-1.5" /></svg>
-const IconDashboard = () => <svg className="w-5 h-5 transition-transform duration-300 group-hover:scale-105" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M2.25 12l8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25" /></svg>
+import api from "../api";
 
 const MyPosts = () => {
   const navigate = useNavigate();
@@ -18,15 +12,8 @@ const MyPosts = () => {
       const token = localStorage.getItem("token");
       if (!token) return navigate("/login");
       setLoading(true);
-      const response = await axios.get(`${API}/api/experience`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const allPosts = response.data;
-      const userId = JSON.parse(atob(token.split(".")[1])).id;
-      const userApprovedPosts = allPosts.filter(
-        post => post.student?._id === userId && post.status === "approved"
-      );
-      setMyPosts(userApprovedPosts);
+      const response = await api.get("/experience/me");
+      setMyPosts(Array.isArray(response.data) ? response.data : []);
     } catch (err) {
       console.error("Error fetching posts:", err);
     } finally {
@@ -34,136 +21,158 @@ const MyPosts = () => {
     }
   }, [navigate]);
 
-  useEffect(() => {
-    fetchMyPosts();
-  }, [fetchMyPosts]);
+  useEffect(() => { fetchMyPosts(); }, [fetchMyPosts]);
+
+  const getStatusStyle = (status) => {
+    switch (status) {
+      case "approved":
+        return {
+          bg: "var(--status-success-bg)",
+          border: "var(--status-success-border)",
+          text: "var(--status-success-text)",
+        };
+      case "rejected":
+        return {
+          bg: "var(--status-error-bg)",
+          border: "var(--status-error-border)",
+          text: "var(--status-error-text)",
+        };
+      default:
+        return {
+          bg: "var(--status-warning-bg)",
+          border: "var(--status-warning-border)",
+          text: "var(--status-warning-text)",
+        };
+    }
+  };
 
   return (
-    <div className="flex h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100 text-gray-800">
-      <div className="flex-1 flex flex-col transition-all duration-300">
-      
-        
-        <main className="flex-1 flex flex-col p-6 overflow-hidden">
-          
-          {/* Fixed Title */}
-          <h2 className="text-4xl font-bold text-gray-900 mb-8 flex-shrink-0">
-            <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-              My Posts
-            </span>
-          </h2>
-          
-          {/* Scrolling Content Area */}
-          <div className="relative flex-1 overflow-y-auto">
-            {loading ? (
-              <div className="text-center text-gray-600 font-medium text-xl">
-                Loading posts...
-              </div>
-            ) : myPosts.length === 0 ? (
-              <div className="flex flex-col items-center justify-center 
-                            text-center bg-white shadow-xl rounded-2xl p-12 
-                            border border-gray-200">
-                <IconNotFound />
-                <h2 className="text-2xl font-semibold mt-6 mb-3 text-gray-800">
-                  No Approved Posts
-                </h2>
-                <p className="text-gray-500 max-w-md leading-relaxed">
-                  Your approved posts will appear here once they are reviewed and approved by our team.
-                </p>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {myPosts.map(post => (
-                  <div
-                    key={post._id}
-                    onClick={() => navigate(`/experience/${post._id}`)}
-                    className="group bg-white rounded-2xl shadow-lg overflow-hidden 
-                               transition-all duration-300 ease-out
-                               hover:shadow-xl
-                               cursor-pointer border border-gray-100 hover:border-gray-200"
-                  >
-                    {/* Card Header - ATTRACTIVE Company Name Section */}
-                    <div className="p-6 bg-gradient-to-r from-blue-100 to-blue-50 
-                                  border-b-2 border-blue-200">
-                      <div className="relative">
-                        {/* Decorative corner accents */}
-                        <div className="absolute -top-2 -left-2 w-4 h-4 bg-blue-300 rounded-full opacity-20"></div>
-                        <div className="absolute -bottom-2 -right-2 w-4 h-4 bg-blue-300 rounded-full opacity-20"></div>
-                        
-                        {/* Company Name with solid background */}
-                        <div className="relative">
-                          <h3 className="text-2xl font-bold text-gray-900 truncate mb-1 
-                                       bg-gradient-to-r from-blue-800 to-blue-900 bg-clip-text text-transparent">
-                            {post.companyName || "N/A"}
-                          </h3>
-                          
+    <div className="flex-1 flex flex-col overflow-hidden">
+      <div className="flex-1 flex flex-col p-6 overflow-hidden">
+        {/* Header */}
+        <div className="flex-shrink-0 mb-6">
+          <h1
+            className="text-2xl font-bold"
+            style={{ color: "var(--text-primary)", letterSpacing: "-0.02em" }}
+          >
+            My Posts
+          </h1>
+          <p className="text-sm mt-1" style={{ color: "var(--text-tertiary)" }}>
+            View all your submitted experiences
+          </p>
+        </div>
 
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Card Body - Details */}
-                    <div className="p-5 space-y-3">
-                      <div className="flex flex-wrap gap-2 text-sm">
-                        <span className="inline-block bg-blue-100 text-blue-700 px-3 py-1 rounded-full font-medium">
-                          {post.branch || "N/A"}
-                        </span>
-                        <span className="inline-block bg-gray-100 text-gray-700 px-3 py-1 rounded-full">
-                          Passout: <strong>{post.passoutYear || "N/A"}</strong>
-                        </span>
-                      </div>
-                      <div className="flex flex-wrap gap-2 text-sm">
-                         <span className="inline-block bg-purple-100 text-purple-700 px-3 py-1 rounded-full font-medium">
-                          {post.type || "N/A"}
-                        </span>
-                        <span className="inline-block bg-green-100 text-green-700 px-3 py-1 rounded-full font-medium">
-                          Status: <strong className="capitalize">{post.status}</strong>
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Card Footer - Upload Date */}
-                    <div className="p-5 bg-gray-50 border-t border-gray-200
-                                  transition-all duration-300 group-hover:bg-gray-100">
-                      <p className="text-xs text-gray-500">
-                        Uploaded:{" "}
-                        {post.createdAt
-                          ? new Date(post.createdAt).toLocaleDateString('en-US', {
-                              year: 'numeric',
-                              month: 'short',
-                              day: 'numeric'
-                            })
-                          : "N/A"}
-                      </p>
-                    </div>
+        {/* Content */}
+        <div className="relative flex-1 overflow-y-auto">
+          {loading ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 stagger">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <div key={i} className="rounded-xl overflow-hidden animate-pulse-soft"
+                  style={{ backgroundColor: "var(--bg-elevated)", border: "1px solid var(--border-default)" }}>
+                  <div className="p-6 space-y-3">
+                    <div className="h-5 rounded-md w-3/4" style={{ backgroundColor: "var(--bg-tertiary)" }} />
+                    <div className="h-4 rounded-md w-1/2" style={{ backgroundColor: "var(--bg-tertiary)" }} />
                   </div>
-                ))}
-              </div>
-            )}
-          </div>
-          
-          {/* Fixed Button Area */}
-          {!loading && (
-            <div className="flex justify-center pt-8 mt-6 border-t border-gray-200 flex-shrink-0">
+                </div>
+              ))}
+            </div>
+          ) : myPosts.length === 0 ? (
+            <div
+              className="flex flex-col items-center justify-center text-center p-16 rounded-xl animate-fade-in"
+              style={{
+                backgroundColor: "var(--bg-elevated)",
+                border: "1px solid var(--border-default)",
+              }}
+            >
+              <svg className="w-12 h-12 mb-4" style={{ color: "var(--text-tertiary)" }} fill="none" viewBox="0 0 24 24" strokeWidth={1} stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m-1.125 0H6.625A2.25 2.25 0 004.5 4.875v11.25a2.25 2.25 0 002.25 2.25h10.5A2.25 2.25 0 0019.5 16.125v-1.5" />
+              </svg>
+              <h2 className="text-lg font-semibold mb-1" style={{ color: "var(--text-primary)" }}>
+                No posts yet
+              </h2>
+              <p className="text-sm mb-4" style={{ color: "var(--text-tertiary)" }}>
+                Your posts will appear here once you share your interview experiences.
+              </p>
               <button
-                onClick={() => navigate('/dashboard')}
-                className="group flex items-center justify-center gap-3
-                           px-8 py-3 bg-white text-gray-700 font-semibold rounded-xl 
-                           border border-gray-300 shadow-lg
-                           transition-all duration-300 ease-out
-                           hover:bg-gray-50 hover:-translate-y-0.5 hover:shadow-xl
-                           hover:border-gray-400
-                           active:scale-95"
+                onClick={() => navigate("/create")}
+                className="text-sm font-medium px-4 py-2 rounded-lg transition-all"
+                style={{ backgroundColor: "var(--accent)", color: "var(--text-on-accent)" }}
+                onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "var(--accent-hover)")}
+                onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "var(--accent)")}
               >
-                <IconDashboard />
-                <span className="transition-transform duration-300 group-hover:scale-105">
-                  Back to Dashboard
-                </span>
+                Create your first post
               </button>
             </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 stagger">
+              {myPosts.map((post) => {
+                const statusStyle = getStatusStyle(post.status);
+                return (
+                  <div
+                    key={post._id}
+                    onClick={() => navigate(`/experience/${post._id}`, { state: { post } })}
+                    className="group rounded-xl overflow-hidden cursor-pointer transition-all"
+                    style={{
+                      backgroundColor: "var(--bg-elevated)",
+                      border: "1px solid var(--border-default)",
+                      boxShadow: "var(--shadow-sm)",
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.borderColor = "var(--border-hover)";
+                      e.currentTarget.style.boxShadow = "var(--shadow-md)";
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.borderColor = "var(--border-default)";
+                      e.currentTarget.style.boxShadow = "var(--shadow-sm)";
+                    }}
+                  >
+                    <div className="p-5 pb-3">
+                      <div className="flex items-start justify-between gap-3">
+                        <h3
+                          className="text-lg font-semibold truncate"
+                          style={{ color: "var(--text-primary)", letterSpacing: "-0.01em" }}
+                        >
+                          {post.companyName || "N/A"}
+                        </h3>
+                        <span
+                          className="text-xs font-semibold uppercase px-2.5 py-1 rounded-full whitespace-nowrap"
+                          style={{
+                            backgroundColor: statusStyle.bg,
+                            color: statusStyle.text,
+                            border: `1px solid ${statusStyle.border}`,
+                          }}
+                        >
+                          {post.status || "pending"}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="px-5 pb-4">
+                      <div className="flex flex-wrap gap-1.5">
+                        <span className="text-xs font-medium px-2.5 py-1 rounded-full"
+                          style={{ backgroundColor: "var(--bg-tertiary)", color: "var(--text-secondary)" }}>
+                          {post.branch || "N/A"}
+                        </span>
+                        <span className="text-xs font-medium px-2.5 py-1 rounded-full"
+                          style={{ backgroundColor: "var(--bg-tertiary)", color: "var(--text-secondary)" }}>
+                          {post.type || "N/A"}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="px-5 py-3" style={{ borderTop: "1px solid var(--border-default)" }}>
+                      <span className="text-xs" style={{ color: "var(--text-tertiary)" }}>
+                        {post.createdAt ? new Date(post.createdAt).toLocaleDateString("en-US", {
+                          year: "numeric", month: "short", day: "numeric",
+                        }) : "N/A"}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           )}
-        </main>
-        
-        <Footer />
+        </div>
       </div>
     </div>
   );

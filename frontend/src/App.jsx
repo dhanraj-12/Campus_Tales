@@ -10,6 +10,7 @@ import Profile from "./pages/Profile";
 import CreateExperience from "./pages/CreateExperience";
 import ExperienceDetails from "./pages/ExperienceDetails";
 import AdminExperienceDetails from "./pages/AdminExperienceDetails";
+import Layout from "./components/Layout";
 
 // RequireAuth component for student routes
 const RequireAuth = () => {
@@ -52,19 +53,23 @@ function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
 
-        {/* Student Routes */}
+        {/* Student Routes — wrapped in Layout */}
         <Route element={<RequireAuth />}>
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/create" element={<CreateExperience />} />
-          <Route path="/experience/:id" element={<ExperienceDetails />} />
-          <Route path="/dashboard/myposts" element={<MyPosts />} />
-          <Route path="/profile" element={<Profile />} />
+          <Route element={<Layout />}>
+            <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/create" element={<CreateExperience />} />
+            <Route path="/experience/:id" element={<ExperienceDetails />} />
+            <Route path="/dashboard/myposts" element={<MyPosts />} />
+            <Route path="/profile" element={<Profile />} />
+          </Route>
         </Route>
 
-        {/* Admin Routes */}
+        {/* Admin Routes — wrapped in Layout */}
         <Route element={<RequireAdmin />}>
-          <Route path="/admin-dashboard" element={<AdminDashboard />} />
-          <Route path="/admin/experience/:id" element={<AdminExperienceDetails />} />
+          <Route element={<Layout />}>
+            <Route path="/admin-dashboard" element={<AdminDashboard />} />
+            <Route path="/admin/experience/:id" element={<AdminExperienceDetails />} />
+          </Route>
         </Route>
 
         {/* Catch-all route */}
