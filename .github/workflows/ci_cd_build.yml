@@ -38,8 +38,8 @@ jobs:
               cd frontend
               npm install
               npm run build
-              rm -rf /var/www/html/*
-              cp -r dist/* /var/www/html/
+              sudo rm -rf /var/www/html/*
+              sudo cp -r dist/* /var/www/html/
               cd ../backend 
               npm install
               pm2 restart all
