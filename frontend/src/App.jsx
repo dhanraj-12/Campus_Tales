@@ -8,6 +8,7 @@ import MyPosts from "./pages/MyPosts";
 import AdminDashboard from "./pages/AdminDashboard";
 import Profile from "./pages/Profile";
 import CreateExperience from "./pages/CreateExperience";
+import Resources from "./pages/Resources";
 import ExperienceDetails from "./pages/ExperienceDetails";
 import AdminExperienceDetails from "./pages/AdminExperienceDetails";
 import Layout from "./components/Layout";
@@ -50,6 +51,7 @@ function App() {
       <Routes>
         {/* Public Routes */}
         <Route path="/" element={<Home />} />
+        <Route path="/resources" element={<Resources />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
 

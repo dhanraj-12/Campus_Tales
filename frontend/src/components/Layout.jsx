@@ -54,9 +54,13 @@ const Layout = () => {
   };
 
   const navLinks = isAdmin
-    ? [{ label: "Dashboard", path: "/admin-dashboard" }]
+    ? [
+        { label: "Dashboard", path: "/admin-dashboard" },
+        { label: "Resources", path: "/resources" },
+      ]
     : [
         { label: "Dashboard", path: "/dashboard" },
+        { label: "Resources", path: "/resources" },
         { label: "My Posts", path: "/dashboard/myposts" },
         { label: "Create", path: "/create" },
         { label: "Profile", path: "/profile" },

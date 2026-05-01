@@ -47,6 +47,7 @@ app.use("/api", apiLimiter);
 app.use("/api/auth", require("./routes/authRoutes"));
 app.use("/api/experience", require("./routes/experienceRoutes"));
 app.use("/api/admin", require("./routes/adminRoutes"));
+app.use("/api/resources", require("./routes/resourceRoutes"));
 
 // Health check
 app.get("/health", (req, res) => {
