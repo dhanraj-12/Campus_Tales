@@ -6,12 +6,16 @@ const morgan = require("morgan");
 const connectDB = require("./config/db");
 const errorHandler = require("./middleware/errorHandler");
 const { apiLimiter } = require("./middleware/rateLimiter");
+const { initNotificationJob } = require("./utils/notificationJob");
 
 // Load environment variables
 dotenv.config();
 
 // Connect to MongoDB
 connectDB();
+
+// Initialize Cron Jobs
+initNotificationJob();
 
 const app = express();
 

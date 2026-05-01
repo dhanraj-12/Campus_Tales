@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import api from "../api";
+import ForumSection from "../components/ForumSection";
 
 // --- Tag component ---
 const InfoTag = ({ label, value }) => (
@@ -216,8 +217,15 @@ const ExperienceDetails = () => {
         </div>
       )}
 
+      {/* Forum/Discussion Section */}
+      <ForumSection 
+        experienceId={id} 
+        experienceAuthorId={experience.student?._id || experience.student}
+        currentUserId={currentUserId}
+      />
+
       {/* Back button */}
-      <div className="pt-6" style={{ borderTop: "1px solid var(--border-default)" }}>
+      <div className="pt-6 mt-12" style={{ borderTop: "1px solid var(--border-default)" }}>
         <button
           onClick={() => navigate(-1)}
           className="text-sm font-medium px-4 py-2 rounded-lg transition-all"

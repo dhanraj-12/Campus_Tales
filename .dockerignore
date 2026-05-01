@@ -1,2 +1,9 @@
-/backend/node_modules
-/frontend/node_modules
+node_modules
+dist
+.env
+.env.local
+.env.*.local
+*.log
+.git
+.github
+.vscode

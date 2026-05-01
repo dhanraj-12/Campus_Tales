@@ -1,17 +1,24 @@
 services:
-
   backend:
     build:
       context: ./backend
       dockerfile: ../Docker/Dockerfile.backend
+    container_name: campus-backend
+    ports:
+      - "5000:5000"
     env_file:
       - ./backend/.env
-    
+    restart: always
+
   frontend:
     build:
       context: ./frontend
       dockerfile: ../Docker/Dockerfile.frontend
-    env_file:
-      - ./frontend/.env
+      args:
+        - VITE_API_URL=http://localhost:5000/api
+    container_name: campus-frontend
+    ports:
+      - "5173:80"
     depends_on:
       - backend
+    restart: always
