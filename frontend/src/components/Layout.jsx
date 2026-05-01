@@ -84,7 +84,7 @@ const Layout = () => {
           style={{ color: "var(--text-primary)" }}
           id="nav-brand"
         >
-          CampusTales
+          CampusFales
         </button>
 
         {/* Center — Nav Links */}
